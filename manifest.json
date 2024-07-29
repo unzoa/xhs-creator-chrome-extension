@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Network Logger",
+  "version": "1.0",
+  "permissions": [
+    "webRequest",
+    "storage",
+    "cookies",
+    "tabs",
+    "activeTab",
+    "downloads"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://creator.xiaohongshu.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "https://creator.xiaohongshu.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
