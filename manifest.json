@@ -8,7 +8,8 @@
     "cookies",
     "tabs",
     "activeTab",
-    "downloads"
+    "downloads",
+    "declarativeContent"
   ],
   "content_scripts": [
     {
@@ -24,5 +25,6 @@
   ],
   "action": {
     "default_popup": "popup.html"
-  }
+  },
+  "devtools_page": "devtools.html"
 }

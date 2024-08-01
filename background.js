@@ -1,26 +1,28 @@
-chrome.runtime.onInstalled.addListener(function() {
-  let ret = {}
-  let processedRequests = new Set(); // 使用 Set 记录处理过的请求
+console.log(2222)
 
-  chrome.webRequest.onBeforeSendHeaders.addListener(
-    function(details) {
-      const urlPattern = "https://creator.xiaohongshu.com/api/galaxy/creator/data/note_stats/new";
+chrome.runtime.onInstalled.addListener(function () {
+  // let ret = {}
+  // let processedRequests = new Set(); // 使用 Set 记录处理过的请求
 
-      if (details.url.startsWith(urlPattern)) {
-        // 查找并保存动态请求头的值
-        for (let header of details.requestHeaders) {
-          ret[header.name] = header.value
-        }
-        // 返回修改后的请求头
-        return { requestHeaders: details.requestHeaders };
-      }
-    },
-    { urls: ["https://creator.xiaohongshu.com/*"] },
-    ["requestHeaders"]
-  );
+  // chrome.webRequest.onBeforeSendHeaders.addListener(
+  //   function (details) {
+  //     const urlPattern = "https://creator.xiaohongshu.com/api/galaxy/creator/data/note_stats/new";
+
+  //     if (details.url.startsWith(urlPattern)) {
+  //       // 查找并保存动态请求头的值
+  //       for (let header of details.requestHeaders) {
+  //         ret[header.name] = header.value
+  //       }
+  //       // 返回修改后的请求头
+  //       return { requestHeaders: details.requestHeaders };
+  //     }
+  //   },
+  //   { urls: ["https://creator.xiaohongshu.com/*"] },
+  //   ["requestHeaders"]
+  // );
 
   chrome.webRequest.onCompleted.addListener(
-    function(details) {
+    function (details) {
       const urlPattern = "https://creator.xiaohongshu.com/api/galaxy/creator/data/note_stats/new";
 
       if (details.url.startsWith(urlPattern)) {
@@ -42,12 +44,12 @@ chrome.runtime.onInstalled.addListener(function() {
         // }
 
         // 向当前活动标签页的内容脚本发送消息
-        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-          if (tabs.length > 0) {
-            const tabId = tabs[0].id;
-            chrome.tabs.sendMessage(tabId, { action: 'refreshDOM', details: details });
-          }
-        });
+        // chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        //   if (tabs.length > 0) {
+        //     const tabId = tabs[0].id;
+        //     chrome.tabs.sendMessage(tabId, { action: 'refreshDOM', details: details });
+        //   }
+        // });
       }
     },
     { urls: ["https://creator.xiaohongshu.com/*"] }
@@ -56,16 +58,32 @@ chrome.runtime.onInstalled.addListener(function() {
 
 
   // 监听来自内容脚本的消息
-  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.type === 'pageData') {
-      const pageData = request.data;
-      console.log('Received page data from content script:', pageData);
+  chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
-      // 存储数据到 chrome.storage
-      chrome.storage.local.set({ 'pageData': pageData }, function() {
-        console.log('Page data saved====', pageData);
-      });
+    console.log(222, 111, request)
+    if (request.type === "networkRequest") {
+      console.log(2222, 2222, request.content)
+
+      // 发送消息到活动的内容脚本
+      // chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      //   chrome.tabs.sendMessage(tabs[0].id, {
+      //     type: "networkRequest",
+      //     content: request.content
+      //   });
+      // });
+
+      // chrome.runtime.sendMessage({type: "networkRequest", content: request.content});
     }
+
+    // if (request.type === 'pageData') {
+    //   const pageData = request.data;
+    //   console.log('Received page data from content script:', pageData);
+
+    //   // 存储数据到 chrome.storage
+    //   chrome.storage.local.set({ 'pageData': pageData }, function () {
+    //     console.log('Page data saved====', pageData);
+    //   });
+    // }
   });
 
 });

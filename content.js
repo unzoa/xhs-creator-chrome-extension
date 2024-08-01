@@ -1,5 +1,4 @@
-// 线索
-// 当页面在笔记页时候，才开始定时计算
+console.log(1111)
 
 let finnal = [
   ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
@@ -32,7 +31,9 @@ if (location.pathname === '/creator/notes') {
 
 function reset() {
   finnal = [
-    ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
+    ['标题', '发布时间', '观看量', '人均观看时长', '点赞量',
+    '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数',
+    '观赞比', '观藏比', '观评比']
   ]
   page = 1
   can_next = false
@@ -76,45 +77,98 @@ setInterval(() => {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   // 获取页数
   page_count = document.querySelector('.page-settings').innerText.split('，')[1].replace(' 页', '') * 1
+  console.log(1111, page, page_count, request)
 
-  if (request.action === 'refreshDOM') {
-    // 选择页面中指定的 DOM 元素
-    const targetElement = document.querySelectorAll('.note-card-container');
-    // 确保元素存在
-    if (targetElement) {
-      let ret = []
-      targetElement.forEach(item => {
-        const dd = get_data_from_dom(item)
-        ret.push(Object.values(dd))
-      })
-      // console.log('ret', ret.length)
-      // console.log('page:', page, page_count)
-
-      // 当页面只有1页时候，只生成一次，不再刷新页面
-      if (page_count === 1) {
-        finnal = finnal.concat(ret)
-      }
-
-      // 当页面数量大于1页
-      else {
-        if (page === page_count) {
-          finnal = finnal.concat(ret)
-          export_xlsx(finnal)
-
-          location.reload();
-        } else {
-          finnal = finnal.concat(ret)
-          setTimeout(() => {
-            can_next = true
-          }, 1000)
-        }
-      }
-    } else {
-      console.log('Element not found');
-    }
+  if (request.type === "networkRequest") {
+    trans_api_data(request)
   }
-});
 
+  // if (request.action === 'refreshDOM') { trans_dom_data() }
+})
+
+function trans_dom_data () {
+  // 选择页面中指定的 DOM 元素
+  const targetElement = document.querySelectorAll('.note-card-container');
+
+  // 确保元素存在
+  if (targetElement) {
+    let ret = []
+    targetElement.forEach(item => {
+      const dd = get_data_from_dom(item)
+      ret.push(Object.values(dd))
+    })
+
+    // 当页面只有1页时候，只生成一次，不再刷新页面
+    if (page_count === 1) {
+      finnal = finnal.concat(ret)
+    }
+
+    // 当页面数量大于1页
+    else {
+      if (page === page_count) {
+        finnal = finnal.concat(ret)
+        export_xlsx(finnal)
+
+        location.reload();
+      } else {
+        finnal = finnal.concat(ret)
+        setTimeout(() => {
+          can_next = true
+        }, 1000)
+      }
+    }
+  } else {
+    console.log('Element not found');
+  }
+};
+
+function trans_api_data (request) {
+  console.log("Received network request data in content script");
+  // 在这里处理接收到的数据
+  const data = JSON.parse(request.content).data.note_infos
+
+  const ret = data.map((item, ind) => {
+    const {
+      title, post_time, // 时间戳
+      read, view_time_avg, // 人均观看量
+      like, fav, comment, danmaku_count, // 弹幕
+      share, follow
+    } = item
+    return [
+      title, formatTimestamp(post_time), // 时间戳
+      read, view_time_avg, // 人均观看量
+      like, fav, comment, danmaku_count, // 弹幕
+      share, follow,
+
+      per2(like, read),
+      per2(fav, read),
+      per2(comment, read)
+    ]
+  })
+
+
+  // 当页面只有1页时候，只生成一次，不再刷新页面
+  if (page_count === 1) {
+    finnal = finnal.concat(ret)
+    return
+  }
+
+  console.log('ret length: ', ret.length, 'finnal length: ', finnal.length)
+
+  // 当页面数量大于1页
+  if (page === page_count) {
+    finnal = finnal.concat(ret)
+    export_xlsx(finnal)
+
+    location.reload();
+  } else {
+    finnal = finnal.concat(ret)
+
+    setTimeout(() => {
+      can_next = true
+    }, 1000)
+  }
+}
 function get_data_from_dom(item) {
   const info_text = item.querySelector('.info-text')
   const data_list = item.querySelector('.info-list').querySelectorAll('.data-list')
@@ -158,12 +212,37 @@ function get_data_from_dom(item) {
   }
 }
 
-function per(str1, str2) {
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  // 格式化为 YYYY-MM-DD HH:MM:SS
+  const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
+  return formattedDate;
+}
+
+function per2 (str1, str2) {
   if (str2 == 0) {
-    return '0%'
+    return 0
   }
 
-  return math_text(str1) / math_text(str2) + '%'
+  return str1 / str2
+}
+
+function per(str1, str2) {
+  if (str2 == 0) {
+    return 0
+  }
+
+  return math_text(str1) / math_text(str2)
 }
 // str 中有汉字，需要计算成数字
 function math_text(str) {
