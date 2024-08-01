@@ -160,10 +160,10 @@ function get_data_from_dom(item) {
 
 function per(str1, str2) {
   if (str2 == 0) {
-    return '0%'
+    return 0
   }
 
-  return math_text(str1) / math_text(str2) + '%'
+  return math_text(str1) / math_text(str2)
 }
 // str 中有汉字，需要计算成数字
 function math_text(str) {

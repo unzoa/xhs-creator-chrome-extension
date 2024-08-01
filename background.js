@@ -1,6 +1,5 @@
 chrome.runtime.onInstalled.addListener(function() {
   let ret = {}
-  let processedRequests = new Set(); // 使用 Set 记录处理过的请求
 
   chrome.webRequest.onBeforeSendHeaders.addListener(
     function(details) {
@@ -56,16 +55,16 @@ chrome.runtime.onInstalled.addListener(function() {
 
 
   // 监听来自内容脚本的消息
-  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.type === 'pageData') {
-      const pageData = request.data;
-      console.log('Received page data from content script:', pageData);
+  // chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  //   if (request.type === 'pageData') {
+  //     const pageData = request.data;
+  //     console.log('Received page data from content script:', pageData);
 
-      // 存储数据到 chrome.storage
-      chrome.storage.local.set({ 'pageData': pageData }, function() {
-        console.log('Page data saved====', pageData);
-      });
-    }
-  });
+  //     // 存储数据到 chrome.storage
+  //     chrome.storage.local.set({ 'pageData': pageData }, function() {
+  //       console.log('Page data saved====', pageData);
+  //     });
+  //   }
+  // });
 
 });
