@@ -4,10 +4,11 @@
   "version": "1.0",
   "permissions": [
     "webRequest",
+    "activeTab",
+    "tabs",
+    "alarms",
     "storage",
     "cookies",
-    "tabs",
-    "activeTab",
     "downloads"
   ],
   "content_scripts": [

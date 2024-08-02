@@ -1,6 +1,3 @@
-// 线索
-// 当页面在笔记页时候，才开始定时计算
-
 let finnal = [
   ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
 ]
@@ -32,7 +29,8 @@ if (location.pathname === '/creator/notes') {
 
 function reset() {
   finnal = [
-    ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
+    ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量',
+    '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
   ]
   page = 1
   can_next = false
@@ -74,46 +72,55 @@ setInterval(() => {
 
 // 监听来自后台脚本的消息
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  console.log('Has receive data.', request.action)
   // 获取页数
   page_count = document.querySelector('.page-settings').innerText.split('，')[1].replace(' 页', '') * 1
 
   if (request.action === 'refreshDOM') {
-    // 选择页面中指定的 DOM 元素
-    const targetElement = document.querySelectorAll('.note-card-container');
-    // 确保元素存在
-    if (targetElement) {
-      let ret = []
-      targetElement.forEach(item => {
-        const dd = get_data_from_dom(item)
-        ret.push(Object.values(dd))
-      })
-      // console.log('ret', ret.length)
-      // console.log('page:', page, page_count)
+    trans_dom_data()
 
-      // 当页面只有1页时候，只生成一次，不再刷新页面
-      if (page_count === 1) {
-        finnal = finnal.concat(ret)
-      }
-
-      // 当页面数量大于1页
-      else {
-        if (page === page_count) {
-          finnal = finnal.concat(ret)
-          export_xlsx(finnal)
-
-          location.reload();
-        } else {
-          finnal = finnal.concat(ret)
-          setTimeout(() => {
-            can_next = true
-          }, 1000)
-        }
-      }
-    } else {
-      console.log('Element not found');
-    }
+    // 异步响应时需要返回 true
+    sendResponse({ status: 'success' });
+    return true; // 需要返回 true 以保持消息通道打开
   }
 });
+
+function trans_dom_data () {
+  // 选择页面中指定的 DOM 元素
+  const targetElement = document.querySelectorAll('.note-card-container');
+  // 确保元素存在
+  if (targetElement) {
+    let ret = []
+    targetElement.forEach(item => {
+      const dd = get_data_from_dom(item)
+      ret.push(Object.values(dd))
+    })
+    // console.log('ret', ret.length)
+    // console.log('page:', page, page_count)
+
+    // 当页面只有1页时候，只生成一次，不再刷新页面
+    if (page_count === 1) {
+      finnal = finnal.concat(ret)
+    }
+
+    // 当页面数量大于1页
+    else {
+      if (page === page_count) {
+        finnal = finnal.concat(ret)
+        export_xlsx(finnal)
+
+        location.reload();
+      } else {
+        finnal = finnal.concat(ret)
+        setTimeout(() => {
+          can_next = true
+        }, 1000)
+      }
+    }
+  } else {
+    console.log('Element not found');
+  }
+}
 
 function get_data_from_dom(item) {
   const info_text = item.querySelector('.info-text')
