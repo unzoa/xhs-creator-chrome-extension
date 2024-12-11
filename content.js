@@ -1,114 +1,69 @@
 // 线索
 // 当页面在笔记页时候，才开始定时计算
 
-let finnal = [
-  ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
-]
-let page = 1
-let page_count = 1
-let can_next = false
-let handle = false
-
-
 // 提取按钮，多页数据，不直接生成报告，而是点击按钮后再自动化生成
 const start_btn_style = 'position: fixed; z-index: 9999; left: 10px; bottom: 10px; width: 100px; height: 40px; background-color: #4CAF50; color: white; cursor: pointer; border: none; font-size: 16px; border-radius: 4px; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2),  0 6px 20px 0 rgba(0,0,0,0.19); '
 const start = document.createElement('button')
 start.innerText = "提取数据"
 start.style = 'display: none;'
 start.onclick = () => {
-  handle = true
-  start.style = 'display: none;'
-
-  // 当只有1页时候，点击按钮才生成报告
-  if (page_count === 1) {
-    export_xlsx(finnal)
-  }
+  // start.style = 'display: none;'
 }
 document.body.appendChild(start);
 
-if (location.pathname === '/creator/notes') {
+if (location.href === 'https://xiaohongshu.com/user/profile/') {
   start.style = start_btn_style
 }
 
-function reset() {
-  finnal = [
-    ['标题', '发布时间', '观看量', '人均观看时长', '点赞量', '收藏量', '评论量', '弹幕数', '分享量', '直接涨粉数', '观赞比', '观藏比', '观评比']
-  ]
-  page = 1
-  can_next = false
-  handle = false
-  start.style = start_btn_style
-}
-// “提取数据”按钮显示判断
-window.addEventListener('popstate', function (event) {
-  if (location.pathname === '/creator/notes') {
-    start.style = start_btn_style
-  } else {
-    reset()
-    start.style = 'display: none;'
-  }
-});
+// 计算字符串宽度的辅助函数
+const getStringWidth = (str) => {
+    let width = 0;
+    for (const char of str) {
+        if (char.match(/[^\x00-\xff]/)) {
+            width += 2; // 汉字和全角字符
+        } else {
+            width += 1; // 英文字符和半角字符
+        }
+    }
+    return width;
+};
 
+// 计算每列的最大宽度
+const getMaxWidths = (data) => {
+    const colWidths = new Array(data[0].length).fill(0);
 
+    data.forEach(row => {
+        row.forEach((cell, colIndex) => {
+            const cellValue = cell !== undefined && cell !== null ? cell.toString() : "";
+            const cellWidth = getStringWidth(cellValue);
+            if (cellWidth > colWidths[colIndex]) {
+                colWidths[colIndex] = cellWidth;
+            }
+        });
+    });
 
-// 触发下一页操作
-function next_page() {
-  const next_page_dom = Array.from(document.querySelector('.page-actions').querySelectorAll('button')).reverse()[0]
-  if (next_page_dom) {
-    next_page_dom.click()
-  } else {
-    console.log('没有下一页')
-  }
-}
-
-// 由于netx_page在chrome.runtime中能触发按钮变化，但是不能触发api请求，所以用定时器中判断条件触发
-setInterval(() => {
-  // console.log('can_next =', can_next, ' handle =', handle)
-  if (can_next && handle) {
-    next_page()
-    page += 1
-    can_next = false
-  }
-}, 1000)
-
+    return colWidths.map(width => ({ wch: width }));
+};
 
 // 监听来自后台脚本的消息
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  // 获取页数
-  page_count = document.querySelector('.page-settings').innerText.split('，')[1].replace(' 页', '') * 1
+  console.log('request', request)
 
   if (request.action === 'refreshDOM') {
     // 选择页面中指定的 DOM 元素
-    const targetElement = document.querySelectorAll('.note-card-container');
+    const targetElement = document.querySelectorAll('#userPostedFeeds');
+    console.log('targetElement', targetElement)
     // 确保元素存在
     if (targetElement) {
       let ret = []
-      targetElement.forEach(item => {
-        const dd = get_data_from_dom(item)
-        ret.push(Object.values(dd))
-      })
+      // targetElement.forEach(item => {
+      //   const dd = get_data_from_dom(item)
+      //   ret.push(Object.values(dd))
+      // })
       // console.log('ret', ret.length)
       // console.log('page:', page, page_count)
 
-      // 当页面只有1页时候，只生成一次，不再刷新页面
-      if (page_count === 1) {
-        finnal = finnal.concat(ret)
-      }
 
-      // 当页面数量大于1页
-      else {
-        if (page === page_count) {
-          finnal = finnal.concat(ret)
-          export_xlsx(finnal)
-
-          location.reload();
-        } else {
-          finnal = finnal.concat(ret)
-          setTimeout(() => {
-            can_next = true
-          }, 1000)
-        }
-      }
     } else {
       console.log('Element not found');
     }
@@ -178,19 +133,6 @@ function export_xlsx(tempData) {
   // 将数据转换为 worksheet 对象
   const worksheet = XLSX.utils.aoa_to_sheet(tempData);
 
-  // 计算字符串宽度的辅助函数
-  const getStringWidth = (str) => {
-    let width = 0;
-    for (const char of str) {
-      if (char.match(/[^\x00-\xff]/)) {
-        width += 2; // 汉字和全角字符
-      } else {
-        width += 1; // 英文字符和半角字符
-      }
-    }
-    return width;
-  };
-
   // 设置单元格样式，使内容居中
   for (let rowIndex = 0; rowIndex < tempData.length; rowIndex++) {
     for (let colIndex = 0; colIndex < tempData[rowIndex].length; colIndex++) {
@@ -205,23 +147,6 @@ function export_xlsx(tempData) {
     }
   }
 
-  // 计算每列的最大宽度
-  const getMaxWidths = (data) => {
-    const colWidths = new Array(data[0].length).fill(0);
-
-    data.forEach(row => {
-      row.forEach((cell, colIndex) => {
-        const cellValue = cell !== undefined && cell !== null ? cell.toString() : "";
-        const cellWidth = getStringWidth(cellValue);
-        if (cellWidth > colWidths[colIndex]) {
-          colWidths[colIndex] = cellWidth;
-        }
-      });
-    });
-
-    return colWidths.map(width => ({ wch: width }));
-  };
-
   // 获取每列的最大宽度
   const colWidths = getMaxWidths(tempData);
 
@@ -234,3 +159,164 @@ function export_xlsx(tempData) {
   // 导出 Excel 文件
   XLSX.writeFile(workbook, 'data.xlsx');
 }
+
+// 添加按钮的函数
+function addButton() {
+    if (document.getElementById('fetchContentButton')) {
+        return;
+    }
+
+    // 创建文件输入框
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'xlsxFileInput';
+    fileInput.accept = '.xlsx';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+
+    const button = document.createElement('button');
+    button.id = 'fetchContentButton';
+    button.textContent = '上传并匹配数据';
+    button.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        padding: 10px 20px;
+        background-color: #fe2c55;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    `;
+
+    button.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            let jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            // 移除第一行
+            jsonData = jsonData.slice(1);
+
+            // 处理第二列的日期格式
+            jsonData.forEach(row => {
+                if (row[1]) {
+                    const dateMatch = row[1].match(/(\d{4})年(\d{2})月(\d{2})日/);
+                    if (dateMatch) {
+                        row[1] = `${dateMatch[1]}年${dateMatch[2]}月${dateMatch[3]}日`;
+                    }
+                }
+            });
+
+            // 获取所有笔记元素
+            const feedsElement = document.getElementById('userPostedFeeds');
+            if (!feedsElement) {
+                alert('未找到内容元素');
+                return;
+            }
+
+            // 获取所有笔记项
+            const noteItems = feedsElement.querySelectorAll('.note-item');
+
+            // 处理每一行数据
+            for (let i = 0; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                const titleToMatch = row[0]; // 第一列作为标题匹配
+
+                // 查找匹配的笔记
+                for (const noteItem of noteItems) {
+                    const titleElement = noteItem.querySelector('.title');
+                    if (titleElement && titleElement.textContent.trim() === titleToMatch) {
+                        const coverElement = noteItem.querySelector('.cover');
+                        if (coverElement) {
+                            const href = coverElement.href;
+                            row.push(href);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 只保留需要的列（1，2，4，5，7，12列）并创建新的数据数组
+            const filteredData = jsonData.map(row => [
+                row[0],  // 第1列
+                row[1],  // 第2列
+                row[3],  // 第4列
+                row[4],  // 第5列
+                row[6],  // 第7列
+                row[11]  // 第12列（新添加的链接）
+            ]);
+
+            // 导出新的 Excel 文件
+            const newWorkbook = XLSX.utils.book_new();
+            const newWorksheet = XLSX.utils.aoa_to_sheet(filteredData);
+
+            // 设置单元格样式
+            const range = XLSX.utils.decode_range(newWorksheet['!ref']);
+            for (let R = range.s.r; R <= range.e.r; R++) {
+                for (let C = range.s.c; C <= range.e.c; C++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (!newWorksheet[cellAddress]) continue;
+                    newWorksheet[cellAddress].s = {
+                        alignment: {
+                            horizontal: 'center',
+                            vertical: 'center'
+                        }
+                    };
+                }
+            }
+
+            // 计算并设置列宽
+            const colWidths = getMaxWidths(filteredData);
+            newWorksheet['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, 'Sheet1');
+            XLSX.writeFile(newWorkbook, '匹配结果.xlsx');
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    document.body.appendChild(button);
+}
+
+// 修改URL检查逻辑
+function checkUrlAndAddButton() {
+    console.log('检查URL:', window.location.href); // 添加调试日志
+    if (window.location.href.includes('/user/profile/')) {
+        console.log('匹配到用户主页，添加按钮'); // 添加调试日志
+        addButton();
+    }
+}
+
+// 立即执行一次检查
+checkUrlAndAddButton();
+
+// 使用 MutationObserver 监听 URL 变化
+let lastUrl = window.location.href;
+const observer = new MutationObserver(() => {
+    const currentUrl = window.location.href;
+    if (currentUrl !== lastUrl) {
+        console.log('URL changed to:', currentUrl); // 添加调试日志
+        lastUrl = currentUrl;
+        checkUrlAndAddButton();
+    }
+});
+
+// 开始观察
+observer.observe(document, { subtree: true, childList: true });
+
+// 添加额外的事件监听
+window.addEventListener('load', checkUrlAndAddButton);
+window.addEventListener('popstate', checkUrlAndAddButton);
+window.addEventListener('pushstate', checkUrlAndAddButton);
+window.addEventListener('replacestate', checkUrlAndAddButton);

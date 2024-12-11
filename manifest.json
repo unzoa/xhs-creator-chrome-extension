@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Network Logger",
+  "name": "小红书内容获取",
   "version": "1.0",
   "permissions": [
     "webRequest",
@@ -12,7 +12,10 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://creator.xiaohongshu.com/*"],
+      "matches": [
+        "https://*.xiaohongshu.com/*",
+        "https://xiaohongshu.com/*"
+      ],
       "js": ["xlsx.full.min.js", "content.js"]
     }
   ],
@@ -20,7 +23,7 @@
     "service_worker": "background.js"
   },
   "host_permissions": [
-    "https://creator.xiaohongshu.com/*"
+    "https://xiaohongshu.com/*"
   ],
   "action": {
     "default_popup": "popup.html"
