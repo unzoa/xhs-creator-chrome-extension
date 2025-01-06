@@ -213,7 +213,7 @@ function addButton() {
                 if (row[1]) {
                     const dateMatch = row[1].match(/(\d{4})年(\d{2})月(\d{2})日/);
                     if (dateMatch) {
-                        row[1] = `${dateMatch[1]}年${dateMatch[2]}月${dateMatch[3]}日`;
+                        row[1] = `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}`;
                     }
                 }
             });
